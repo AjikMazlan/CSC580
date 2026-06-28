@@ -1,0 +1,9 @@
+cd D:\DEGREE UITM SEM 5\CSC 580\CSC580
+
+cl /EHsc /O2 sequential_analytic_2.cpp /out:sequential_analytic_2.exe
+cl /EHsc /O2 sequential_analytic_2.cpp
+
+
+sequential_analytic_2.exe "Dataset\1M data.csv" 1000000
+sequential_analytic_2.exe "Dataset\10M data.csv" 10000000
+sequential_analytic_2.exe "Dataset\100M data.csv" 100000000
