@@ -11,29 +11,31 @@ using namespace std;
 vector<double> loadData()
 {
     vector<double> data;
-    // Removed the ./ prefix, using standard relative path
-    ifstream file("Dataset/1Mdata.csv"); 
+    ifstream file("Dataset/1M data.csv"); 
 
-    // 1. Check if the file actually opened
     if (!file.is_open())
     {
-        cout << "ERROR: Could not open the file! The path is wrong or the file is locked.\n";
+        cout << "ERROR: Could not open the file!\n";
         return data; 
     }
 
     cout << "SUCCESS: File opened successfully! Starting to read...\n";
 
+    // --- THE FIX: Tell C++ to read and ignore the very first line ---
+    string dummyLine;
+    getline(file, dummyLine); 
+    // ----------------------------------------------------------------
+
     double x;
+    // Now it will start reading numbers from line 2
     while(file >> x)
     {
         data.push_back(x);
     }
 
-    // 2. Check if the file was opened but no numbers were read
     if (data.empty())
     {
         cout << "ERROR: File was found, but no numbers were read.\n";
-        cout << "Fix: Open 1Mdata.csv in Notepad. Is there a text header on the first row?\n";
     }
 
     file.close();
