@@ -15,3 +15,4 @@ instruction for th mpi_analaytcs
 cl /EHsc /O2 mpi_analytic.cpp -I"C:\MPI\MS_MPI\SDK\Include" /link /LIBPATH:"C:\MPI\MS_MPI\SDK\Lib\x64" msmpi.lib /out:mpi_analytic.exe  
 
 mpiexec -n 2 mpi_analytic.exe
+mpiexec -hosts 2 192.168.1.218 1 192.168.1.86 1 mpi_analytic.exe

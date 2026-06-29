@@ -135,7 +135,7 @@ void task6_outliers(const vector<DataPoint>& data, double mean, double stddev) {
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        cout << "Cara guna: sequential_analytic_2.exe <nama_fail> <saiz_data>\n";
+        cout << "Cara guna: sequential_analytic.exe <nama_fail> <saiz_data>\n";
         return 1;
     }
     
