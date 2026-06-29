@@ -1,0 +1,33 @@
+
+--- RUN MPI: Dataset/10M data.csv (10000000 records, 2 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,15099.1,15.0991
+Basic_Stats,28.665,0.028665
+Histogram,19.1203,0.0191203
+Pearson_Correlation,15.8787,0.0158787
+Z_Score_Outliers,11.994,0.011994
+Moving_Average,0.000200002,2.00002e-07
+Sorting,11274,11.274
+Total_All_Tasks,26449.3,26.4493
+
+--- RUN MPI: Dataset/10M data.csv (10000000 records, 4 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,12468.6,12.4686
+Basic_Stats,28.1134,0.0281134
+Histogram,9.1579,0.0091579
+Pearson_Correlation,6.646,0.006646
+Z_Score_Outliers,4.2221,0.0042221
+Moving_Average,0.000200002,2.00002e-07
+Sorting,21785.6,21.7856
+Total_All_Tasks,34302.5,34.3025
+
+--- RUN MPI: Dataset/100M data.csv (100000000 records, 4 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,219694,219.694
+Basic_Stats,2205.51,2.20551
+Histogram,70.9747,0.0709747
+Pearson_Correlation,66.9968,0.0669968
+Z_Score_Outliers,45.6836,0.0456836
+Moving_Average,0.000200002,2.00002e-07
+Sorting,235020,235.02
+Total_All_Tasks,457109,457.109

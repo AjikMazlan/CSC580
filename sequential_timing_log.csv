@@ -1,0 +1,12 @@
+
+--- RUN: Dataset\10M data.csv (10000000 records) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,18926.8,18.9268
+Basic_Stats,39.9125,0.0399125
+Histogram,32.8,0.0328
+Pearson_Correlation,25.602,0.025602
+Z_Score_Outliers,22.2966,0.0222966
+Moving_Average,0.3812,0.0003812
+Sorting,905.543,0.905543
+Total_All_Tasks,19958.1,19.9581
+
