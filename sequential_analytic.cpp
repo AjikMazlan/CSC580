@@ -4,214 +4,185 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
+#include <string>
+#include <sstream>
 
 using namespace std;
+using namespace std::chrono;
 
+// Struktur untuk menyimpan 2 column tanpa bercampur
+struct DataPoint {
+    double f1;
+    double f2;
+};
 
-vector<double> loadData()
-{
-    vector<double> data;
-    ifstream file("Dataset/1M data.csv"); 
-
-    if (!file.is_open())
-    {
-        cout << "ERROR: Could not open the file!\n";
-        return data; 
+// Fungsi loadData kini merekodkan masa membaca
+vector<DataPoint> loadData(string filename, int limit, double& load_time_ms) {
+    vector<DataPoint> data;
+    auto start = high_resolution_clock::now();
+    
+    ifstream file(filename);
+    if (!file.is_open()) {
+        cout << "Ralat: Gagal membuka fail " << filename << "\n";
+        return data;
     }
 
-    cout << "SUCCESS: File opened successfully! Starting to read...\n";
+    string line;
+    getline(file, line); // Abaikan header
 
-    // --- THE FIX: Tell C++ to read and ignore the very first line ---
-    string dummyLine;
-    getline(file, dummyLine); 
-    // ----------------------------------------------------------------
-
-    double x;
-    // Now it will start reading numbers from line 2
-    while(file >> x)
-    {
-        data.push_back(x);
+    int count = 0;
+    while (getline(file, line) && count < limit) {
+        stringstream ss(line);
+        string val1, val2;
+        if (getline(ss, val1, ',') && getline(ss, val2, ',')) {
+            try {
+                data.push_back({stod(val1), stod(val2)});
+                count++;
+            } catch (...) {}
+        }
     }
-
-    if (data.empty())
-    {
-        cout << "ERROR: File was found, but no numbers were read.\n";
-    }
-
     file.close();
+    
+    auto end = high_resolution_clock::now();
+    load_time_ms = duration<double, milli>(end - start).count();
     return data;
 }
 
+// ---------------- TASK FUNCTIONS ----------------
 
-//Basic Statistic
-void statistics(vector<double>& data)
-{
-
-    double sum=0;
-
-
-    double minValue=data[0];
-
-    double maxValue=data[0];
-
-
-    for(double x:data)
-    {
-
-        sum+=x;
-
-
-        if(x<minValue)
-            minValue=x;
-
-
-        if(x>maxValue)
-            maxValue=x;
-
+void task1_statistics(const vector<DataPoint>& data, double& mean, double& stddev) {
+    double sum = 0, min_val = data[0].f1, max_val = data[0].f1;
+    for (const auto& dp : data) {
+        sum += dp.f1;
+        if (dp.f1 < min_val) min_val = dp.f1;
+        if (dp.f1 > max_val) max_val = dp.f1;
     }
-
-
-    double mean=sum/data.size();
-
-
-
-    double variance=0;
-
-
-    for(double x:data)
-    {
-        variance += pow(x-mean,2);
+    
+    mean = sum / data.size();
+    double variance = 0;
+    for (const auto& dp : data) {
+        variance += pow(dp.f1 - mean, 2);
     }
+    variance /= data.size();
+    stddev = sqrt(variance);
 
-
-    variance/=data.size();
-
-
-
-    cout<<"Mean: "<<mean<<endl;
-
-    cout<<"Variance: "<<variance<<endl;
-
-    cout<<"Std: "<<sqrt(variance)<<endl;
-
-    cout<<"Min: "<<minValue<<endl;
-
-    cout<<"Max: "<<maxValue<<endl;
-
+    cout << "[Task 1] Mean: " << mean << " | StdDev: " << stddev 
+         << " | Min: " << min_val << " | Max: " << max_val << endl;
 }
 
-
-
-//Histogram Generation
-void histogram(vector<double>& data)
-{
-
-    int bins[10]={0};
-
-
-    for(double x:data)
-    {
-
-        int index=x/1000;
-
-
-        if(index>=10)
-            index=9;
-
-
+void task2_histogram(const vector<DataPoint>& data) {
+    int bins[10] = {0};
+    for (const auto& dp : data) {
+        int index = static_cast<int>(dp.f1 / 1000.0);
+        if (index >= 10) index = 9;
+        if (index < 0) index = 0;
         bins[index]++;
-
     }
-
-
-
-    cout<<"\nHistogram\n";
-
-
-    for(int i=0;i<10;i++)
-    {
-        cout<<"Bin "<<i<<" : "<<bins[i]<<endl;
-    }
-
+    cout << "[Task 2] Histogram dikira (Bin 0: " << bins[0] << " ...)\n";
 }
 
+void task3_sorting(vector<DataPoint>& data) {
+    // Susun berdasarkan feature_1 (f1)
+    sort(data.begin(), data.end(), [](const DataPoint& a, const DataPoint& b) {
+        return a.f1 < b.f1;
+    });
+    cout << "[Task 3] Data berjaya disusun (Sorting).\n";
+}
 
-//moving average
-void movingAverage(vector<double>& data)
-{
+void task4_pearson(const vector<DataPoint>& data) {
+    double sum_x = 0, sum_y = 0, sum_xy = 0;
+    double sum_x2 = 0, sum_y2 = 0;
+    int n = data.size();
 
-    int window=5;
+    for (const auto& dp : data) {
+        sum_x += dp.f1;
+        sum_y += dp.f2;
+        sum_xy += (dp.f1 * dp.f2);
+        sum_x2 += (dp.f1 * dp.f1);
+        sum_y2 += (dp.f2 * dp.f2);
+    }
 
+    double numerator = (n * sum_xy) - (sum_x * sum_y);
+    double denominator = sqrt(((n * sum_x2) - (sum_x * sum_x)) * ((n * sum_y2) - (sum_y * sum_y)));
+    
+    double correlation = (denominator == 0) ? 0 : numerator / denominator;
+    cout << "[Task 4] Pearson Correlation: " << correlation << endl;
+}
 
-    double avg;
+void task5_movingAverage(const vector<DataPoint>& data) {
+    int window = 5;
+    if (data.size() < window) return;
+    
+    double first_avg = 0;
+    for(int j = 0; j < window; j++) {
+        first_avg += data[j].f1;
+    }
+    cout << "[Task 5] Moving Average (Sample Pertama): " << first_avg / window << endl;
+}
 
-
-    cout<<"\nMoving Average sample:\n";
-
-
-    for(int i=0;i<10;i++)
-    {
-
-        avg=0;
-
-
-        for(int j=0;j<window;j++)
-        {
-
-            avg+=data[i+j];
-
+void task6_outliers(const vector<DataPoint>& data, double mean, double stddev) {
+    int outlier_count = 0;
+    for (const auto& dp : data) {
+        double z_score = abs((dp.f1 - mean) / stddev);
+        if (z_score > 3.0) {
+            outlier_count++;
         }
-
-
-        cout<<avg/window<<endl;
-
     }
-
+    cout << "[Task 6] Z-Score Outliers dikesan: " << outlier_count << endl;
 }
 
+// ---------------- MAIN EXECUTOR ----------------
 
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        cout << "Cara guna: sequential_analytic_2.exe <nama_fail> <saiz_data>\n";
+        return 1;
+    }
+    
+    string filename = argv[1];
+    int dataSize = stoi(argv[2]);
 
-int main()
-{
+    double load_time_ms = 0;
+    cout << "--- Memuatkan " << dataSize << " rekod dari fail: " << filename << " ---\n";
+    
+    vector<DataPoint> data = loadData(filename, dataSize, load_time_ms);
+    cout << "    -> Masa Loading Data: " << load_time_ms << " ms\n\n";
+    
+    if (data.empty()) return 1;
 
+    ofstream logFile("sequential_timing_log.csv", ios::app);
+    logFile << "\n--- RUN: " << filename << " (" << dataSize << " records) ---\n";
+    logFile << "Task,Time_ms,Time_Seconds\n";
+    
+    // Rekod load time ke dalam log
+    logFile << "Data_Loading," << load_time_ms << "," << (load_time_ms / 1000.0) << "\n";
 
-auto start =
-chrono::high_resolution_clock::now();
+    double mean = 0, stddev = 0;
+    #define MEASURE_TIME(taskName, funcCall) { \
+        auto start = high_resolution_clock::now(); \
+        funcCall; \
+        auto end = high_resolution_clock::now(); \
+        double elapsed_s = duration<double>(end - start).count(); \
+        double elapsed_ms = elapsed_s * 1000.0; \
+        cout << "    -> Masa diambil: " << elapsed_ms << " ms (" << elapsed_s << " s)\n\n"; \
+        logFile << taskName << "," << elapsed_ms << "," << elapsed_s << "\n"; \
+    }
 
+    auto total_start = high_resolution_clock::now();
 
+    MEASURE_TIME("Basic_Stats", task1_statistics(data, mean, stddev));
+    MEASURE_TIME("Histogram", task2_histogram(data));
+    MEASURE_TIME("Pearson_Correlation", task4_pearson(data));
+    MEASURE_TIME("Z_Score_Outliers", task6_outliers(data, mean, stddev));
+    MEASURE_TIME("Moving_Average", task5_movingAverage(data));
+    MEASURE_TIME("Sorting", task3_sorting(data));
 
-vector<double> data=loadData();
+    auto total_end = high_resolution_clock::now();
+    double total_s = duration<double>(total_end - total_start).count() + (load_time_ms / 1000.0);
+    
+    cout << "=== TOTAL KESELURUHAN MASA: " << total_s << " s ===\n";
+    logFile << "Total_All_Tasks," << (total_s * 1000.0) << "," << total_s << "\n";
+    logFile.close();
 
-
-
-cout<<"Data size: "
-<<data.size()<<endl;
-
-
-
-statistics(data);
-
-
-histogram(data);
-
-
-
-sort(data.begin(),data.end());
-
-
-movingAverage(data);
-
-
-
-auto end = chrono::high_resolution_clock::now();
-
-// Remove 'milli' to default to seconds
-double time = chrono::duration<double>(end - start).count();
-
-// Update the output text to reflect the new unit
-cout << "\nTotal time: " << time << " seconds\n";
-
-
-return 0;
-
+    return 0;
 }

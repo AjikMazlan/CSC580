@@ -1,185 +1,92 @@
 #include <mpi.h>
-
 #include <iostream>
 #include <vector>
-#include <random>
-#include <numeric>
-
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <algorithm>
 
 using namespace std;
 
+struct DataPoint { double f1, f2; };
 
+int main(int argc, char* argv[]) {
+    MPI_Init(&argc, &argv);
 
-int main(int argc,char* argv[])
-{
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-
-MPI_Init(&argc,&argv);
-
-
-
-int rank,size;
-
-
-
-MPI_Comm_rank(
-MPI_COMM_WORLD,
-&rank);
-
-
-
-MPI_Comm_size(
-MPI_COMM_WORLD,
-&size);
-
-
-
-long long N=10000000;
-
-
-
-vector<double> data;
-
-
-
-if(rank==0)
-{
-
-    data.resize(N);
-
-
-    mt19937_64 rng(42);
-
-
-    uniform_real_distribution<double>
-    dist(0,10000);
-
-
-    for(long long i=0;i<N;i++)
-    {
-
-        data[i]=dist(rng);
-
+    const long long N = 1000000; // Contoh 1 juta rekod
+    
+    // [SAFETY CHECK] Pastikan data boleh dibahagi tepat dengan jumlah laptop
+    if (N % size != 0) {
+        if (rank == 0) cout << "Ralat: Saiz data (N) mesti boleh dibahagi tepat dengan jumlah node (size)!" << endl;
+        MPI_Finalize();
+        return 1;
     }
 
-}
-
-
-
-
-MPI_Bcast(
-&N,
-1,
-MPI_LONG_LONG,
-0,
-MPI_COMM_WORLD);
-
-
-
-long long localSize=N/size;
-
-
-
-vector<double> localData(localSize);
-
-
-
-MPI_Scatter(
-data.data(),
-localSize,
-MPI_DOUBLE,
-
-
-localData.data(),
-localSize,
-MPI_DOUBLE,
-
-
-0,
-MPI_COMM_WORLD);
-
-
-
-MPI_Barrier(
-MPI_COMM_WORLD);
-
-
-
-double start=MPI_Wtime();
-
-
-
-
-// local calculation
-
-
-double localSum=0;
-
-
-for(double x:localData)
-{
-
-    localSum+=x;
-
-}
-
-
-
-
-double totalSum;
-
-
-
-MPI_Reduce(
-
-&localSum,
-
-&totalSum,
-
-1,
-
-MPI_DOUBLE,
-
-MPI_SUM,
-
-0,
-
-MPI_COMM_WORLD
-
-);
-
-
-
-
-double end=MPI_Wtime();
-
-
-
-if(rank==0)
-{
-
-double mean=
-totalSum/N;
-
-
-cout<<"MPI Result\n";
-
-cout<<"Mean: "
-<<mean<<endl;
-
-
-cout<<"Time: "
-<<(end-start)*1000
-<<" ms\n";
-
-}
-
-
-
-
-MPI_Finalize();
-
-
-return 0;
-
+    long long localSize = N / size;
+    vector<DataPoint> allData;
+    vector<DataPoint> localData(localSize);
+
+    // 1. MASTER NODE Membaca Fail CSV
+    if (rank == 0) {
+        cout << "Master: Membaca fail..." << endl;
+        ifstream file("1M data.csv");
+        
+        // [SAFETY CHECK] Pastikan fail wujud
+        if (!file.is_open()) {
+            cout << "Ralat: Fail '1M data.csv' tidak dijumpai di Master Node!" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        string line;
+        getline(file, line); // Skip header
+        for (int i = 0; i < N; ++i) {
+            getline(file, line);
+            stringstream ss(line);
+            string v1, v2;
+            getline(ss, v1, ','); getline(ss, v2, ',');
+            allData.push_back({stod(v1), stod(v2)});
+        }
+    }
+
+    // 2. SCATTER: Agihkan data kepada semua node
+    // Nota: Struct DataPoint ada 2 double, jadi saiznya didarab 2
+    MPI_Scatter(allData.empty() ? nullptr : allData.data(), localSize * 2, MPI_DOUBLE,
+                localData.data(), localSize * 2, MPI_DOUBLE,
+                0, MPI_COMM_WORLD);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    double start = MPI_Wtime();
+
+    // 3. ANALISIS PARALLEL (Setiap Node buat kerja sendiri)
+    double localSum = 0;
+    for (auto& p : localData) localSum += p.f1;
+
+    sort(localData.begin(), localData.end(), [](DataPoint a, DataPoint b) {
+        return a.f1 < b.f1;
+    });
+
+    // 4. REDUCE: Kumpul hasil tambah (sum)
+    double totalSum = 0;
+    MPI_Reduce(&localSum, &totalSum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    // [TAMBAHAN] GATHER: Hantar balik data yang dah siap disort ke Master
+    MPI_Gather(localData.data(), localSize * 2, MPI_DOUBLE,
+               allData.empty() ? nullptr : allData.data(), localSize * 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    double end = MPI_Wtime();
+
+    // 5. OUTPUT MASTER NODE
+    if (rank == 0) {
+        cout << "--- Analisis MPI Selesai ---" << endl;
+        cout << "Mean: " << totalSum / N << endl;
+        cout << "Masa Komputasi Parallel: " << (end - start) * 1000 << " ms" << endl;
+        cout << "Bukti Gather Berjaya (Nilai terkecil rank 0): " << allData[0].f1 << endl;
+    }
+
+    MPI_Finalize();
+    return 0;
 }
