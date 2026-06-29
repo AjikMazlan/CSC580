@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     // 1. MASTER NODE Membaca Fail CSV
     if (rank == 0) {
         cout << "Master: Membaca fail..." << endl;
-        ifstream file("1M data.csv");
+        ifstream file("Dataset/100M data.csv");
         
         // [SAFETY CHECK] Pastikan fail wujud
         if (!file.is_open()) {

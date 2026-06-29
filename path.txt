@@ -1,6 +1,6 @@
 cd D:\DEGREE UITM SEM 5\CSC 580\CSC580
 
-cl /EHsc /O2 sequential_analytic.cpp /out:sequential_analytic_2.exe
+cl /EHsc /O2 sequential_analytic.cpp /out:sequential_analytic.exe
 cl /EHsc /O2 sequential_analytic.cpp
 
 
@@ -9,3 +9,9 @@ sequential_analytic.exe "Dataset\10M data.csv" 10000000
 sequential_analytic.exe "Dataset\100M data.csv" 100000000
 
 mpiexec -hosts 2 192.168.1.218 1 192.168.1.86 1 hostname
+
+
+instruction for th mpi_analaytcs
+cl /EHsc /O2 mpi_analytic.cpp -I"C:\MPI\MS_MPI\SDK\Include" /link /LIBPATH:"C:\MPI\MS_MPI\SDK\Lib\x64" msmpi.lib /out:mpi_analytic.exe  
+
+mpiexec -n 2 mpi_analytic.exe
