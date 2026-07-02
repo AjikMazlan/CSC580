@@ -1,3 +1,4 @@
+mpi record
 
 --- RUN MPI: Dataset/1M data.csv (1000000 records, 2 nodes) ---
 Task,Time_ms,Time_Seconds
@@ -31,3 +32,71 @@ Z_Score_Outliers,82.0026,0.0820026
 Moving_Average,0.000300119,3.00119e-07
 Sorting,102038,102.038
 Total_All_Tasks,234662,234.662
+
+
+--- RUN MPI: Dataset/1M data.csv (1000000 records, 3 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,996.94,0.99694
+Basic_Stats,8.4842,0.0084842
+Histogram,5.5889,0.0055889
+Pearson_Correlation,3.0967,0.0030967
+Z_Score_Outliers,1.9013,0.0019013
+Moving_Average,0.000299886,2.99886e-07
+Sorting,1308.07,1.30807
+Total_All_Tasks,2327.37,2.32737
+
+--- RUN MPI: Dataset/10M data.csv (10000000 records, 3 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,11853.1,11.8531
+Basic_Stats,22.2288,0.0222288
+Histogram,13.8855,0.0138855
+Pearson_Correlation,11.2659,0.0112659
+Z_Score_Outliers,7.589,0.007589
+Moving_Average,0.000200002,2.00002e-07
+Sorting,12424.3,12.4243
+Total_All_Tasks,24340.3,24.3403
+
+--- RUN MPI: Dataset/100M data.csv (100000000 records, 3 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,132683,132.683
+Basic_Stats,138.897,0.138897
+Histogram,97.6355,0.0976355
+Pearson_Correlation,98.2194,0.0982194
+Z_Score_Outliers,57.2656,0.0572656
+Moving_Average,0.000200002,2.00002e-07
+Sorting,138408,138.408
+Total_All_Tasks,271490,271.49
+
+
+--- RUN MPI: Dataset/1M data.csv (1000000 records, 4 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,1003.2,1.0032
+Basic_Stats,127.646,0.127646
+Histogram,12.2574,0.0122574
+Pearson_Correlation,2.2329,0.0022329
+Z_Score_Outliers,1.3643,0.0013643
+Moving_Average,0.000200002,2.00002e-07
+Sorting,1662.11,1.66211
+Total_All_Tasks,2809.54,2.80954
+
+--- RUN MPI: Dataset/10M data.csv (10000000 records, 4 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,11833.5,11.8335
+Basic_Stats,19.045,0.019045
+Histogram,9.9496,0.0099496
+Pearson_Correlation,7.9358,0.0079358
+Z_Score_Outliers,5.6148,0.0056148
+Moving_Average,0.000200002,2.00002e-07
+Sorting,15989.7,15.9897
+Total_All_Tasks,27866.1,27.8661
+
+--- RUN MPI: Dataset/100M data.csv (100000000 records, 4 nodes) ---
+Task,Time_ms,Time_Seconds
+Data_Loading,131669,131.669
+Basic_Stats,1240.1,1.2401
+Histogram,97.5099,0.0975099
+Pearson_Correlation,99.5717,0.0995717
+Z_Score_Outliers,47.9218,0.0479218
+Moving_Average,0.000200002,2.00002e-07
+Sorting,164861,164.861
+Total_All_Tasks,298018,298.018
