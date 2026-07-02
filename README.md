@@ -1,3 +1,1 @@
-<h1 align="center">AWAL NATEY UPLOAD</h1>
 
-# JIK AWAL JIK, LAMBAT DEMO WAK KIJO
