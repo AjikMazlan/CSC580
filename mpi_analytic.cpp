@@ -29,13 +29,19 @@ int main(int argc, char* argv[]) {
     string filename = argv[1];
     long long N = stoll(argv[2]);
 
-    if (N % size != 0) {
-        if (rank == 0) cout << "Ralat: Saiz data (" << N << ") tak boleh dibahagi tepat dengan jumlah node (" << size << ")!\n";
-        MPI_Finalize();
-        return 1;
+    // ---------------- FIX: Kira sendcounts & displs (boleh handle baki tak genap) ----------------
+    // Sebelum ni: if (N % size != 0) { error }  <-- DIBUANG, sebab tak perlu lagi
+    vector<int> sendcounts(size), displs(size); // dalam UNIT DataPoint (bukan double)
+    long long base_chunk = N / size;
+    long long remainder  = N % size;
+    long long offset = 0;
+    for (int i = 0; i < size; i++) {
+        sendcounts[i] = (int)(base_chunk + (i < remainder ? 1 : 0));
+        displs[i] = (int)offset;
+        offset += sendcounts[i];
     }
+    long long localSize = sendcounts[rank]; // saiz local untuk node ni sendiri
 
-    long long localSize = N / size;
     vector<DataPoint> allData;
     vector<DataPoint> localData(localSize);
     double load_time_ms = 0;
@@ -44,7 +50,7 @@ int main(int argc, char* argv[]) {
     if (rank == 0) {
         cout << "--- Memuatkan " << N << " rekod dari fail: " << filename << " ---\n";
         auto start_load = high_resolution_clock::now();
-        
+
         ifstream file(filename);
         if (!file.is_open()) {
             cout << "Ralat: Fail '" << filename << "' tidak dijumpai di Master Node!\n";
@@ -70,9 +76,18 @@ int main(int argc, char* argv[]) {
         cout << "    -> Masa Loading Data: " << load_time_ms << " ms\n\n";
     }
 
-    // SCATTER: Agihkan data ke semua node
-    MPI_Scatter(allData.empty() ? nullptr : allData.data(), localSize * 2, MPI_DOUBLE,
-                localData.data(), localSize * 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // ---------------- FIX: SCATTERV gantikan SCATTER ----------------
+    // Kira counts & displs dalam unit DOUBLE (setiap DataPoint = 2 double: f1, f2)
+    vector<int> scatterCounts(size), scatterDispls(size);
+    for (int i = 0; i < size; i++) {
+        scatterCounts[i] = sendcounts[i] * 2;
+        scatterDispls[i] = displs[i] * 2;
+    }
+
+    MPI_Scatterv(allData.empty() ? nullptr : allData.data(),
+                 scatterCounts.data(), scatterDispls.data(), MPI_DOUBLE,
+                 localData.data(), (int)(localSize * 2), MPI_DOUBLE,
+                 0, MPI_COMM_WORLD);
 
     // Buka fail log di Master Node
     ofstream logFile;
@@ -102,26 +117,27 @@ int main(int argc, char* argv[]) {
 
     double global_mean = 0;
     if (rank == 0) global_mean = global_sum / N;
-    MPI_Bcast(&global_mean, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); // Broadcast mean ke semua node
+    MPI_Bcast(&global_mean, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     double local_var_sum = 0;
     for (const auto& dp : localData) {
         local_var_sum += pow(dp.f1 - global_mean, 2);
     }
-    
+
     double global_var_sum = 0;
     MPI_Reduce(&local_var_sum, &global_var_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     double global_stddev = 0;
-    
+
     if (rank == 0) {
         global_stddev = sqrt(global_var_sum / N);
         double t1_end = MPI_Wtime();
         double elapsed = (t1_end - t1_start) * 1000.0;
-        cout << "[Task 1] Mean: " << global_mean << " | StdDev: " << global_stddev 
+        cout << "[Task 1] Mean: " << global_mean << " | StdDev: " << global_stddev
              << " | Min: " << global_min << " | Max: " << global_max << "\n";
         cout << "    -> Masa diambil: " << elapsed << " ms\n\n";
         logFile << "Basic_Stats," << elapsed << "," << elapsed / 1000.0 << "\n";
     }
+    MPI_Bcast(&global_stddev, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); // FIX: semua node perlu stddev untuk Task 6
 
     // ---------------- TASK 2: HISTOGRAM ----------------
     double t2_start = MPI_Wtime();
@@ -135,7 +151,7 @@ int main(int argc, char* argv[]) {
 
     int global_bins[10] = {0};
     MPI_Reduce(local_bins, global_bins, 10, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    
+
     if (rank == 0) {
         double t2_end = MPI_Wtime();
         double elapsed = (t2_end - t2_start) * 1000.0;
@@ -166,7 +182,7 @@ int main(int argc, char* argv[]) {
         double numerator = (N * g_sum_xy) - (g_sum_x * g_sum_y);
         double denominator = sqrt(((N * g_sum_x2) - (g_sum_x * g_sum_x)) * ((N * g_sum_y2) - (g_sum_y * g_sum_y)));
         double correlation = (denominator == 0) ? 0 : numerator / denominator;
-        
+
         double t4_end = MPI_Wtime();
         double elapsed = (t4_end - t4_start) * 1000.0;
         cout << "[Task 4] Pearson Correlation: " << correlation << "\n";
@@ -196,11 +212,11 @@ int main(int argc, char* argv[]) {
     // ---------------- TASK 5: MOVING AVERAGE ----------------
     double t5_start = MPI_Wtime();
     double first_avg = 0;
-    if (rank == 0) { // Rank 0 pegang data pertama
+    if (rank == 0) {
         int window = 5;
         for(int j = 0; j < window; j++) first_avg += localData[j].f1;
         first_avg /= window;
-        
+
         double t5_end = MPI_Wtime();
         double elapsed = (t5_end - t5_start) * 1000.0;
         cout << "[Task 5] Moving Average (Sample Pertama): " << first_avg << "\n";
@@ -210,21 +226,22 @@ int main(int argc, char* argv[]) {
 
     // ---------------- TASK 3: SORTING ----------------
     double t3_start = MPI_Wtime();
-    // Susun data tempatan di setiap node
     sort(localData.begin(), localData.end(), [](DataPoint a, DataPoint b) {
         return a.f1 < b.f1;
     });
 
-    // Kumpul data yang telah disusun separuh jalan ke Master
-    MPI_Gather(localData.data(), localSize * 2, MPI_DOUBLE,
-               allData.empty() ? nullptr : allData.data(), localSize * 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // FIX: GATHERV gantikan GATHER (localSize berbeza-beza ikut node sekarang)
+    if (rank == 0 && (long long)allData.size() < N) allData.resize(N); // pastikan buffer cukup besar
+    MPI_Gatherv(localData.data(), (int)(localSize * 2), MPI_DOUBLE,
+                allData.empty() ? nullptr : allData.data(),
+                scatterCounts.data(), scatterDispls.data(), MPI_DOUBLE,
+                0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        // Master menyusun semula keseluruhan blok data (Final Sort)
         sort(allData.begin(), allData.end(), [](DataPoint a, DataPoint b) {
             return a.f1 < b.f1;
         });
-        
+
         double t3_end = MPI_Wtime();
         double elapsed = (t3_end - t3_start) * 1000.0;
         cout << "[Task 3] Data berjaya disusun secara Parallel & Global.\n";
@@ -235,11 +252,11 @@ int main(int argc, char* argv[]) {
     // ---------------- TAMAT & TUTUP LOG ----------------
     MPI_Barrier(MPI_COMM_WORLD);
     double total_end = MPI_Wtime();
-    
+
     if (rank == 0) {
         double total_mpi_s = (total_end - total_start);
         double total_overall_s = total_mpi_s + (load_time_ms / 1000.0);
-        
+
         cout << "=== TOTAL KESELURUHAN MASA (Termasuk Load): " << total_overall_s << " s ===\n";
         logFile << "Total_All_Tasks," << (total_overall_s * 1000.0) << "," << total_overall_s << "\n";
         logFile.close();
