@@ -1,4 +1,4 @@
-192.168.1.86 #Member 1 (Master)
-192.168.1.218 #Member 2 (Worker)
+192.168.1.218 #Member 1 (Master)
+192.168.1.86 #Member 2 (Worker)
 192.168.1.216 #Member 3 (Worker)
 192.168.1.95 #Member 4 (Worker)
